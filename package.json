@@ -1,0 +1,22 @@
+{
+  "name": "vinyl-crackle",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Add vinyl crackle (surface noise) to any website's audio",
+  "scripts": {
+    "dev": "node esbuild.config.mjs --watch",
+    "build": "node esbuild.config.mjs",
+    "typecheck": "tsc --noEmit",
+    "package": "cd dist && zip -r ../vinyl-crackle.zip . && cd .."
+  },
+  "devDependencies": {
+    "esbuild": "latest",
+    "typescript": "latest",
+    "@types/chrome": "latest"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "esbuild"
+    ]
+  }
+}

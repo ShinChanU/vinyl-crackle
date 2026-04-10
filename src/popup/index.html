@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="index.css">
+</head>
+<body>
+  <div class="container">
+    <header class="header">
+      <h1 class="title">Vinyl Crackle</h1>
+      <label class="toggle">
+        <input type="checkbox" id="toggle-enabled">
+        <span class="toggle-slider"></span>
+      </label>
+    </header>
+
+    <section class="section">
+      <h2 class="section-title">Preset</h2>
+      <div class="presets" id="presets"></div>
+    </section>
+
+    <section class="section">
+      <h2 class="section-title">Fine Tune</h2>
+      <div class="slider-group">
+        <label class="slider-label">
+          <span>Surface</span>
+          <span class="slider-value" id="surface-value">30%</span>
+        </label>
+        <input type="range" id="slider-surface" min="0" max="100" value="30" class="slider">
+      </div>
+      <div class="slider-group">
+        <label class="slider-label">
+          <span>Pops</span>
+          <span class="slider-value" id="pops-value">6/s</span>
+        </label>
+        <input type="range" id="slider-pops" min="0" max="40" value="6" class="slider">
+      </div>
+      <div class="slider-group">
+        <label class="slider-label">
+          <span>Dust</span>
+          <span class="slider-value" id="dust-value">20%</span>
+        </label>
+        <input type="range" id="slider-dust" min="0" max="100" value="20" class="slider">
+      </div>
+    </section>
+
+    <section class="section">
+      <h2 class="section-title">Master</h2>
+      <div class="slider-group">
+        <label class="slider-label">
+          <span>Intensity</span>
+          <span class="slider-value" id="master-value">50%</span>
+        </label>
+        <input type="range" id="slider-master" min="0" max="100" value="50" class="slider">
+      </div>
+    </section>
+  </div>
+
+  <script src="index.js" type="module"></script>
+</body>
+</html>
