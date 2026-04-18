@@ -13,9 +13,11 @@ const commonOptions = {
 
 function copyStaticAssets() {
   mkdirSync("dist/popup", { recursive: true });
+  mkdirSync("dist/offscreen", { recursive: true });
   cpSync("public", "dist", { recursive: true });
   cpSync("src/popup/index.html", "dist/popup/index.html");
   cpSync("src/popup/index.css", "dist/popup/index.css");
+  cpSync("src/offscreen/index.html", "dist/offscreen/index.html");
 }
 
 const entryPoints = [
@@ -34,6 +36,11 @@ const entryPoints = [
     ...commonOptions,
     entryPoints: ["src/popup/index.ts"],
     outfile: "dist/popup/index.js",
+  },
+  {
+    ...commonOptions,
+    entryPoints: ["src/offscreen/index.ts"],
+    outfile: "dist/offscreen/index.js",
   },
   {
     ...commonOptions,

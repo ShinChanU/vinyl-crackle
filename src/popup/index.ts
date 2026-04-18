@@ -1,11 +1,12 @@
 import { PRESETS, PRESET_LABELS, PRESET_NAMES } from "../shared/presets";
 import { DEFAULT_SETTINGS } from "../shared/constants";
-import type { PresetName, Settings } from "../shared/types";
+import type { PlaybackMode, PresetName, Settings } from "../shared/types";
 
 let settings: Settings = { ...DEFAULT_SETTINGS };
 
-const toggleEl = document.getElementById("toggle-enabled") as HTMLInputElement;
 const presetsContainer = document.getElementById("presets")!;
+const segmentedEl = document.getElementById("mode-segmented")!;
+const hintEl = document.getElementById("mode-hint")!;
 const surfaceSlider = document.getElementById("slider-surface") as HTMLInputElement;
 const popsSlider = document.getElementById("slider-pops") as HTMLInputElement;
 const dustSlider = document.getElementById("slider-dust") as HTMLInputElement;
@@ -14,6 +15,12 @@ const surfaceValue = document.getElementById("surface-value")!;
 const popsValue = document.getElementById("pops-value")!;
 const dustValue = document.getElementById("dust-value")!;
 const masterValue = document.getElementById("master-value")!;
+
+const MODE_HINTS: Record<PlaybackMode, string> = {
+  off: "Crackle is disabled.",
+  overlay: "Crackle overlays on top of media playback.",
+  ambient: "Crackle plays on its own, no media required.",
+};
 
 function createPresetButtons(): void {
   presetsContainer.innerHTML = "";
@@ -34,9 +41,22 @@ function selectPreset(name: PresetName): void {
   pushSettings();
 }
 
+function selectMode(mode: PlaybackMode): void {
+  if (settings.mode === mode) return;
+  settings.mode = mode;
+  syncUI();
+  void chrome.runtime.sendMessage({ type: "SET_MODE", payload: { mode } }).catch(() => {});
+}
+
 function syncUI(): void {
-  toggleEl.checked = settings.enabled;
-  document.body.classList.toggle("disabled", !settings.enabled);
+  document.body.classList.toggle("mode-off", settings.mode === "off");
+
+  segmentedEl.querySelectorAll<HTMLButtonElement>(".segment").forEach((btn) => {
+    const active = btn.dataset.mode === settings.mode;
+    btn.classList.toggle("active", active);
+    btn.setAttribute("aria-checked", String(active));
+  });
+  hintEl.textContent = MODE_HINTS[settings.mode];
 
   document.querySelectorAll<HTMLButtonElement>(".preset-btn").forEach((btn) => {
     btn.classList.toggle("active", btn.dataset.preset === settings.preset);
@@ -60,14 +80,16 @@ async function pushSettings(): Promise<void> {
       payload: settings,
     });
   } catch {
-    // Service worker might not be ready
+    // service worker 미기동
   }
 }
 
-toggleEl.addEventListener("change", () => {
-  settings.enabled = toggleEl.checked;
-  syncUI();
-  pushSettings();
+segmentedEl.addEventListener("click", (e) => {
+  const target = e.target as HTMLElement;
+  const btn = target.closest<HTMLButtonElement>(".segment");
+  if (!btn) return;
+  const mode = btn.dataset.mode as PlaybackMode | undefined;
+  if (mode) selectMode(mode);
 });
 
 surfaceSlider.addEventListener("input", () => {
@@ -99,14 +121,12 @@ async function init(): Promise<void> {
 
   try {
     const response = await chrome.runtime.sendMessage({ type: "GET_SETTINGS" });
-    if (response?.settings) {
-      settings = response.settings;
-    }
+    if (response?.settings) settings = response.settings;
   } catch {
-    // Use defaults
+    // 기본값 사용
   }
 
   syncUI();
 }
 
-init();
+void init();

@@ -1,13 +1,17 @@
 import { loadSettings, saveSettings } from "../shared/storage";
-import type { Message, MessageResponse, Settings } from "../shared/types";
+import type {
+  Message,
+  MessageResponse,
+  PlaybackMode,
+  Settings,
+} from "../shared/types";
+import { closeDocument, ensureDocument } from "./offscreen-manager";
 
 let cachedSettings: Settings | null = null;
 let saveTimer: ReturnType<typeof setTimeout> | null = null;
 
 async function getSettings(): Promise<Settings> {
-  if (!cachedSettings) {
-    cachedSettings = await loadSettings();
-  }
+  if (!cachedSettings) cachedSettings = await loadSettings();
   return cachedSettings;
 }
 
@@ -18,19 +22,51 @@ function debouncedSave(settings: Settings): void {
   }, 1000);
 }
 
-async function broadcastToContentScripts(settings: Settings): Promise<void> {
+async function broadcastSettings(settings: Settings): Promise<void> {
+  const msg = { type: "SETTINGS_CHANGED", payload: settings };
+
+  try { await chrome.runtime.sendMessage(msg); } catch { /* no receiver */ }
+
   const tabs = await chrome.tabs.query({});
   for (const tab of tabs) {
     if (!tab.id) continue;
-    try {
-      await chrome.tabs.sendMessage(tab.id, {
-        type: "UPDATE_SETTINGS",
-        payload: settings,
-      });
-    } catch {
-      // Tab might not have content script injected
-    }
+    try { await chrome.tabs.sendMessage(tab.id, msg); } catch { /* 미주입 탭 */ }
   }
+}
+
+async function updateBadge(mode: PlaybackMode): Promise<void> {
+  try {
+    if (mode === "ambient") {
+      await chrome.action.setBadgeText({ text: "●" });
+      await chrome.action.setBadgeBackgroundColor({ color: "#c97d3a" });
+    } else {
+      await chrome.action.setBadgeText({ text: "" });
+    }
+  } catch {
+    // ignore
+  }
+}
+
+async function syncOffscreen(mode: PlaybackMode): Promise<void> {
+  if (mode === "ambient") {
+    await ensureDocument();
+  } else {
+    await closeDocument();
+  }
+  await updateBadge(mode);
+}
+
+async function applyMode(next: Settings): Promise<void> {
+  cachedSettings = next;
+  await saveSettings(next);
+  await syncOffscreen(next.mode);
+  await broadcastSettings(next);
+}
+
+async function applyParams(next: Settings): Promise<void> {
+  cachedSettings = next;
+  debouncedSave(next);
+  await broadcastSettings(next);
 }
 
 chrome.runtime.onMessage.addListener(
@@ -43,22 +79,24 @@ chrome.runtime.onMessage.addListener(
           break;
         }
 
-        case "UPDATE_SETTINGS": {
-          const settings = message.payload as Settings;
-          cachedSettings = settings;
-          debouncedSave(settings);
-          await broadcastToContentScripts(settings);
-          sendResponse({ success: true, settings });
+        case "SET_MODE": {
+          const payload = message.payload as { mode: PlaybackMode };
+          const current = await getSettings();
+          const next: Settings = { ...current, mode: payload.mode };
+          await applyMode(next);
+          sendResponse({ success: true, settings: next });
           break;
         }
 
-        case "TOGGLE_ENABLED": {
-          const settings = await getSettings();
-          settings.enabled = !settings.enabled;
-          cachedSettings = settings;
-          debouncedSave(settings);
-          await broadcastToContentScripts(settings);
-          sendResponse({ success: true, settings });
+        case "UPDATE_SETTINGS": {
+          const next = message.payload as Settings;
+          const current = await getSettings();
+          if (current.mode !== next.mode) {
+            await applyMode(next);
+          } else {
+            await applyParams(next);
+          }
+          sendResponse({ success: true, settings: next });
           break;
         }
       }
@@ -69,5 +107,11 @@ chrome.runtime.onMessage.addListener(
 );
 
 chrome.runtime.onInstalled.addListener(async () => {
-  await getSettings();
+  const settings = await getSettings();
+  await syncOffscreen(settings.mode);
+});
+
+chrome.runtime.onStartup.addListener(async () => {
+  const settings = await getSettings();
+  await syncOffscreen(settings.mode);
 });

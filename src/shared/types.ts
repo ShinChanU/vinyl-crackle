@@ -6,8 +6,10 @@ export interface CrackleParams {
 
 export type PresetName = "lightDust" | "warmVinyl" | "wornRecord" | "antique";
 
+export type PlaybackMode = "off" | "overlay" | "ambient";
+
 export interface Settings {
-  enabled: boolean;
+  mode: PlaybackMode;
   preset: PresetName;
   params: CrackleParams;
   masterIntensity: number;
@@ -16,12 +18,12 @@ export interface Settings {
 export type MessageType =
   | "GET_SETTINGS"
   | "UPDATE_SETTINGS"
-  | "TOGGLE_ENABLED"
+  | "SET_MODE"
   | "SETTINGS_CHANGED";
 
 export interface Message {
   type: MessageType;
-  payload?: Partial<Settings>;
+  payload?: unknown;
 }
 
 export interface MessageResponse {
