@@ -34,13 +34,19 @@ async function broadcastSettings(settings: Settings): Promise<void> {
   }
 }
 
+const BADGE_BY_MODE: Record<PlaybackMode, { text: string; bg: string; fg: string }> = {
+  off: { text: "○", bg: "#2a2a2a", fg: "#9ca3af" },
+  overlay: { text: "◐", bg: "#2a2a2a", fg: "#c97d3a" },
+  ambient: { text: "●", bg: "#2a2a2a", fg: "#c97d3a" },
+};
+
 async function updateBadge(mode: PlaybackMode): Promise<void> {
   try {
-    if (mode === "ambient") {
-      await chrome.action.setBadgeText({ text: "●" });
-      await chrome.action.setBadgeBackgroundColor({ color: "#c97d3a" });
-    } else {
-      await chrome.action.setBadgeText({ text: "" });
+    const badge = BADGE_BY_MODE[mode];
+    await chrome.action.setBadgeText({ text: badge.text });
+    await chrome.action.setBadgeBackgroundColor({ color: badge.bg });
+    if (chrome.action.setBadgeTextColor) {
+      await chrome.action.setBadgeTextColor({ color: badge.fg });
     }
   } catch {
     // ignore
