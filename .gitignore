@@ -3,3 +3,9 @@ dist/
 *.zip
 .DS_Store
 *.log
+
+# Test artifacts
+coverage/
+playwright-report/
+test-results/
+
