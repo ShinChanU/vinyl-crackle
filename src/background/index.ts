@@ -34,20 +34,25 @@ async function broadcastSettings(settings: Settings): Promise<void> {
   }
 }
 
-const BADGE_BY_MODE: Record<PlaybackMode, { text: string; bg: string; fg: string }> = {
-  off: { text: "○", bg: "#2a2a2a", fg: "#9ca3af" },
-  overlay: { text: "◐", bg: "#2a2a2a", fg: "#c97d3a" },
-  ambient: { text: "●", bg: "#2a2a2a", fg: "#c97d3a" },
-};
+// Badge-text API (chrome.action.setBadgeText) can't render single-glyph
+// indicators like ○/◐/● pixel-symmetrically because system-font glyph
+// metrics for U+25CB / U+25CF are inherently asymmetric. We pre-render a
+// PNG per (size, mode) and swap the whole icon instead — see
+// scripts/generate-icons.py.
+const ICON_SIZES = [16, 32, 48, 128] as const;
 
-async function updateBadge(mode: PlaybackMode): Promise<void> {
+function iconPathsFor(mode: PlaybackMode): Record<number, string> {
+  const paths: Record<number, string> = {};
+  for (const size of ICON_SIZES) {
+    paths[size] = `icons/icon${size}-${mode}.png`;
+  }
+  return paths;
+}
+
+async function updateIcon(mode: PlaybackMode): Promise<void> {
   try {
-    const badge = BADGE_BY_MODE[mode];
-    await chrome.action.setBadgeText({ text: badge.text });
-    await chrome.action.setBadgeBackgroundColor({ color: badge.bg });
-    if (chrome.action.setBadgeTextColor) {
-      await chrome.action.setBadgeTextColor({ color: badge.fg });
-    }
+    await chrome.action.setIcon({ path: iconPathsFor(mode) });
+    await chrome.action.setBadgeText({ text: "" });
   } catch {
     // ignore
   }
@@ -59,7 +64,7 @@ async function syncOffscreen(mode: PlaybackMode): Promise<void> {
   } else {
     await closeDocument();
   }
-  await updateBadge(mode);
+  await updateIcon(mode);
 }
 
 async function applyMode(next: Settings): Promise<void> {
