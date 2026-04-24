@@ -4,13 +4,17 @@ A Chrome extension that adds LP vinyl crackle (surface noise) to any website's a
 
 ## Features
 
-- **Universal**: Works on any website with `<audio>` or `<video>` elements
+- **Three Playback Modes**
+  - **Off** — Crackle disabled
+  - **Overlay** — Crackle overlays on top of media playback (requires playing `<audio>` / `<video>`)
+  - **Ambient** — Crackle plays on its own via an offscreen document, no media required
 - **Real-time DSP**: Three procedurally generated noise components
   - **Surface Noise** — Band-pass filtered white noise (continuous hiss)
   - **Clicks & Pops** — Poisson-distributed random impulses
   - **Dust Particles** — Short noise bursts with envelope
 - **4 Presets**: Light Dust, Warm Vinyl, Worn Record, Antique
 - **Fine-tuning**: Individual sliders for Surface, Pops, Dust, and Master Intensity
+- **Mode-indicator icons**: Toolbar icon changes per mode for at-a-glance status
 - **Settings sync**: Your preferences persist across browser sessions
 
 ## Screenshot
@@ -42,29 +46,38 @@ pnpm build
 pnpm dev          # Watch mode — rebuilds on file changes
 pnpm build        # Production build → dist/
 pnpm typecheck    # TypeScript type check
+pnpm test         # Run unit tests (Vitest)
+pnpm test:watch   # Unit tests in watch mode
+pnpm e2e          # Run E2E tests (Playwright, requires pnpm build first)
 pnpm package      # Package dist/ → vinyl-crackle.zip
 ```
 
 ## Tech Stack
 
-- **TypeScript** (strict mode)
-- **esbuild** for bundling (4 independent entry points)
+- **TypeScript** (strict mode, ES2022)
+- **esbuild** for bundling (5 entry points: content, service-worker, popup, offscreen, crackle-processor)
 - **Web Audio API** — ScriptProcessorNode for real-time noise generation
-- **Chrome Extension Manifest V3**
+- **Chrome Extension Manifest V3** (service worker, `offscreen` API)
+- **Vitest** + **Playwright** for unit & E2E testing
 
 ## Architecture
 
 ```
 src/
-├── content/     → Injected into every page. Detects media playback,
-│                  generates crackle via ScriptProcessorNode overlay.
-├── background/  → Service worker. Routes messages, persists settings.
-├── popup/       → Extension popup UI. Presets, sliders, toggle.
-├── audio/       → AudioWorklet processor (experimental, unused due to CSP).
-└── shared/      → Types, presets, constants, storage wrapper.
+├── background/  → Service worker. Routes messages, persists settings,
+│                  manages offscreen document lifecycle, swaps mode icons.
+├── content/     → Injected into every page. Overlay mode — detects media
+│                  playback and generates crackle via ScriptProcessorNode.
+├── offscreen/   → Offscreen document for Ambient mode. Plays crackle
+│                  independently without requiring tab media.
+├── popup/       → Extension popup UI. Mode selector, presets, sliders.
+├── audio/       → AudioWorklet processor (built but unused at runtime due
+│                  to CSP restrictions on sites like YouTube).
+└── shared/      → Types, presets, constants, storage wrapper, crackle
+                   engine (DSP + node factory used by both content & offscreen).
 ```
 
-The crackle is generated as a **separate audio overlay** rather than intercepting media audio. This approach bypasses Content Security Policy (CSP) restrictions that block AudioWorklet module loading on sites like YouTube.
+Crackle is generated as a **separate audio overlay** rather than intercepting media audio. In **Overlay** mode, the content script runs per-tab alongside page media. In **Ambient** mode, a single offscreen document plays crackle globally without needing any media element.
 
 ## How the DSP Works
 
