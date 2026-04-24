@@ -15,7 +15,7 @@ A Chrome extension that adds LP vinyl crackle (surface noise) to any website's a
 
 ## Screenshot
 
-<img width="320" alt="Vinyl Crackle popup" src="docs/popup-screenshot.png">
+<img width="320" alt="image" src="https://github.com/user-attachments/assets/48f69182-bccb-493d-ae02-24a996036792" />
 
 ## Install (Development)
 
